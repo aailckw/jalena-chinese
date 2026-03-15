@@ -1,4 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="6" fill="#ff6b6b"/>
-  <text x="16" y="22" text-anchor="middle" font-size="18" font-weight="bold" fill="white" font-family="sans-serif">x</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff8787" />
+      <stop offset="100%" stop-color="#ff5252" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="128" height="128" rx="32" fill="url(#bg)" />
+  
+  <!-- Inner dashed line for a "flashcard" feel -->
+  <rect x="10" y="10" width="108" height="108" rx="24" fill="none" stroke="#ffffff" stroke-width="4" stroke-dasharray="8 8" opacity="0.5" />
+  
+  <!-- Character -->
+  <text x="64" y="92" text-anchor="middle" font-size="72" font-weight="900" fill="#ffffff" font-family="'Noto Sans TC', system-ui, sans-serif">學</text>
+  
+  <!-- Cute decorative dots matching the app's color palette -->
+  <circle cx="28" cy="32" r="6" fill="#facc15" />
+  <circle cx="100" cy="36" r="5" fill="#4ade80" />
+  <circle cx="32" cy="98" r="4" fill="#3b82f6" />
 </svg>
