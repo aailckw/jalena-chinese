@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import { getLessonWeeks } from "@/data/worksheet-lessons";
+import { ThemeCardImage } from "@/components/theme-card-image";
 
 export default function Home() {
   const weeks = getLessonWeeks();
@@ -38,16 +38,7 @@ export default function Home() {
                   className="group flex h-full flex-col overflow-hidden rounded-[1.4rem] border-2 border-[var(--line)] bg-white text-left text-[var(--foreground)] shadow-sm transition hover:-translate-y-0.5 hover:bg-[var(--surface-strong)]"
                 >
                   <div className="relative h-40 w-full overflow-hidden border-b-2 border-[var(--line)] bg-[var(--surface-strong)] sm:h-48">
-                    <Image
-                      src={`/generated/card-images/theme-${w.id}.png`}
-                      alt={w.theme}
-                      fill
-                      sizes="(min-width: 640px) 50vw, 100vw"
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
+                    <ThemeCardImage themeId={w.id} themeName={w.theme} />
                   </div>
                   <div className="flex flex-1 flex-col p-5">
                     <span className="mb-2 inline-flex w-fit rounded-full bg-[var(--primary-soft)] px-3 py-1 text-sm font-semibold text-gray-700">
