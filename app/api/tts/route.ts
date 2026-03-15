@@ -15,7 +15,7 @@ function toKidFriendlySlowText(text: string): string {
     .trim();
 }
 
-async function requestTts(apiKey: string, text: string) {
+async function requestTts(apiKey: string, text: string, languageType: string) {
   return fetch(TTS_URL, {
     method: "POST",
     headers: {
@@ -27,7 +27,7 @@ async function requestTts(apiKey: string, text: string) {
       input: {
         text,
         voice: VOICE,
-        language_type: "Chinese",
+        language_type: languageType,
       },
     }),
   });
@@ -59,9 +59,16 @@ export async function POST(request: Request) {
   }
   const ttsText = slow ? toKidFriendlySlowText(text) : text;
 
-  let res = await requestTts(apiKey, ttsText);
+  // Prefer Cantonese voice output first; fallback to generic Chinese if provider rejects it.
+  let res = await requestTts(apiKey, ttsText, "Cantonese");
+  if (!res.ok) {
+    res = await requestTts(apiKey, ttsText, "Chinese");
+  }
   if (!res.ok && slow && ttsText !== text) {
-    res = await requestTts(apiKey, text);
+    res = await requestTts(apiKey, text, "Cantonese");
+  }
+  if (!res.ok && slow && ttsText !== text) {
+    res = await requestTts(apiKey, text, "Chinese");
   }
 
   if (!res.ok) {

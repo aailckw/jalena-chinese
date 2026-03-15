@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import { Play } from "lucide-react";
+import { Play, Volume2 } from "lucide-react";
 import { RecordButton } from "./record-button";
 import { FeedbackPanel } from "./feedback-panel";
 import { ChoiceGame } from "./choice-game";
@@ -28,6 +28,7 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
   const [sentenceToSay, setSentenceToSay] = useState<string>(item.expectedAnswer);
   const [status, setStatus] = useState<"idle" | "listening" | "recording" | "checking" | "success" | "retry">("idle");
   const [feedback, setFeedback] = useState<{ message: string; isCorrect: boolean } | null>(null);
+  const [lastRecordingUrl, setLastRecordingUrl] = useState<string | null>(null);
 
   const previewSentence =
     item.frame
@@ -36,6 +37,12 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
   const flashcardSentence = stage === "speak" ? sentenceToSay : previewSentence;
   const swappableSlots = item.frame?.slots.filter((slot) => slot.options.length > 1) ?? [];
   const textToPlay = flashcardSentence;
+
+  useEffect(() => {
+    return () => {
+      if (lastRecordingUrl) URL.revokeObjectURL(lastRecordingUrl);
+    };
+  }, [lastRecordingUrl]);
 
   const handlePlay = useCallback(async () => {
     setStatus("listening");
@@ -95,6 +102,10 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
     async (audioBlob: Blob) => {
       setStatus("checking");
       setFeedback(null);
+      setLastRecordingUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(audioBlob);
+      });
       const accepted = item.frame ? item.frame.acceptedAnswers : [item.expectedAnswer, ...(item.alternatives ?? [])];
       try {
         const form = new FormData();
@@ -119,8 +130,9 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
           }),
         });
         const assessData = await assessRes.ok ? await assessRes.json() : { correct: false, message: "再試一次" };
+        const baseMessage = assessData.message ?? (assessData.correct ? "好叻！" : "再試一次");
         setFeedback({
-          message: assessData.message ?? (assessData.correct ? "好叻！" : "再試一次"),
+          message: assessData.correct || !transcript ? baseMessage : `${baseMessage}（識別到：${transcript}）`,
           isCorrect: !!assessData.correct,
         });
         if (assessData.correct) {
@@ -141,6 +153,16 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
     },
     [item.id, item.frame, item.expectedAnswer, item.alternatives, sentenceToSay, weekId]
   );
+
+  const handlePlayLastRecording = useCallback(async () => {
+    if (!lastRecordingUrl) return;
+    try {
+      const audio = new Audio(lastRecordingUrl);
+      await audio.play();
+    } catch {
+      setFeedback({ message: "錄音播放唔到，請再錄一次。", isCorrect: false });
+    }
+  }, [lastRecordingUrl]);
 
   const showListen = stage === "listen" || (!hasFrame && status === "idle");
   const showChoose = hasFrame && stage === "choose";
@@ -305,6 +327,18 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
                   }
                 />
               </div>
+              {lastRecordingUrl ? (
+                <motion.button
+                  type="button"
+                  onClick={handlePlayLastRecording}
+                  className="kid-button bg-white px-5 text-[var(--foreground)] ring-2 ring-[var(--line)]/60 flex items-center justify-center gap-2"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Volume2 size={20} />
+                  播放我嘅錄音
+                </motion.button>
+              ) : null}
             </motion.div>
           )}
         </AnimatePresence>

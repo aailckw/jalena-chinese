@@ -6,7 +6,15 @@
 import type { SentenceSlot } from "@/lib/lesson-schema";
 
 function normalize(s: string): string {
-  return s
+  const charMap: Record<string, string> = {
+    裡: "裏",
+    里: "裏",
+    进: "進",
+    复: "復",
+    台: "臺",
+  };
+  const unified = [...s].map((ch) => charMap[ch] ?? ch).join("");
+  return unified
     .replace(/\s+/g, "")
     .replace(/[，。、！？,.\s]/g, "")
     .trim();
@@ -14,6 +22,37 @@ function normalize(s: string): string {
 
 function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+
+  const dp = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+
+  return dp[m][n];
+}
+
+function similarity(a: string, b: string): number {
+  if (!a || !b) return 0;
+  const dist = levenshtein(a, b);
+  return 1 - dist / Math.max(a.length, b.length);
 }
 
 export interface AssessmentResult {
@@ -38,25 +77,49 @@ function parseTranscriptByFrame(transcript: string, frame: string, slots: Senten
   const order = frame.match(/\{(\w+)\}/g)?.map((m) => m.slice(1, -1)) ?? [];
   const normalizedTranscript = normalize(transcript);
 
-  const pattern = `^${frame.replace(/\{(\w+)\}/g, (_, id: string) => {
-    const slot = slots.find((s) => s.id === id);
-    if (!slot) {
-      return "(.*?)";
-    }
-    const options = [...slot.options].sort((a, b) => b.length - a.length);
-    return `(${options.map((opt) => escapeRegex(normalize(opt))).join("|")})`;
-  })}$`;
-
-  const match = normalizedTranscript.match(new RegExp(pattern));
+  const loosePattern = frame
+    .split(/\{(\w+)\}/)
+    .map((part, idx) => (idx % 2 === 1 ? "(.*?)" : escapeRegex(normalize(part))))
+    .join("");
+  const match = normalizedTranscript.match(new RegExp(loosePattern));
 
   return order.map((id, index) => {
     const slot = slots.find((s) => s.id === id);
-    const got = match?.[index + 1] ?? null;
+    const gotRaw = normalize(match?.[index + 1] ?? "");
+    const options = slot?.options ?? [];
+    const normalizedOptions = options.map((opt) => normalize(opt));
+
+    let got: string | null = gotRaw || null;
+    let valid = false;
+    for (const opt of normalizedOptions) {
+      if (!gotRaw) break;
+      if (
+        gotRaw === opt ||
+        gotRaw.includes(opt) ||
+        opt.includes(gotRaw) ||
+        similarity(gotRaw, opt) >= 0.72
+      ) {
+        got = opt;
+        valid = true;
+        break;
+      }
+    }
+
+    if (!valid && slot) {
+      const found = normalizedOptions.find(
+        (opt) => normalizedTranscript.includes(opt) || similarity(normalizedTranscript, opt) >= 0.78
+      );
+      if (found) {
+        got = found;
+        valid = true;
+      }
+    }
+
     return {
       slotId: id,
       label: slot?.label ?? id,
       got,
-      valid: got != null,
+      valid,
     };
   });
 }
@@ -79,6 +142,9 @@ export function assessTranscript(
     if (t === accepted) {
       return { correct: true, message: "好叻！" };
     }
+    if (similarity(t, accepted) >= 0.72) {
+      return { correct: true, message: "好叻！" };
+    }
   }
 
   if (frameInfo) {
@@ -87,13 +153,24 @@ export function assessTranscript(
     const validCount = slotResults.filter((r) => r.valid).length;
     const wrongSlots = slotResults.filter((r) => !r.valid);
     const consumed = slotResults.reduce((sum, r) => sum + (r.got?.length ?? 0), 0);
-    const mostlyConsumed = consumed >= expected.length * 0.7;
+    const mostlyConsumed = consumed >= expected.length * 0.45;
+    const expectedSimilarity = similarity(t, expected);
 
     if (allValid && mostlyConsumed) {
       return {
         correct: true,
         message: "好叻！",
         slotFeedback: slotResults.map((r) => ({ slotId: r.slotId, label: r.label, valid: true, got: r.got ?? undefined })),
+      };
+    }
+
+    // Be lenient for ASR noise: if most slots are recognized and sentence is reasonably close,
+    // accept it instead of forcing a retry on tiny transcription drift.
+    if (validCount >= Math.max(1, slotResults.length - 1) && expectedSimilarity >= 0.5) {
+      return {
+        correct: true,
+        message: "好叻！",
+        slotFeedback: slotResults.map((r) => ({ slotId: r.slotId, label: r.label, valid: r.valid, got: r.got ?? undefined })),
       };
     }
 
@@ -115,7 +192,7 @@ export function assessTranscript(
       };
     }
 
-    if (!mostlyConsumed && validCount > 0) {
+    if (!mostlyConsumed && validCount > 0 && expectedSimilarity < 0.5) {
       return {
         correct: false,
         message: "差少少，講埋後面。",
@@ -124,16 +201,12 @@ export function assessTranscript(
     }
   }
 
-  const expectedChars = [...expected];
-  const transcriptChars = [...t];
-  let matched = 0;
-  const minLen = Math.min(expectedChars.length, transcriptChars.length);
-  for (let i = 0; i < minLen; i++) {
-    if (expectedChars[i] === transcriptChars[i]) matched++;
-  }
-  const ratio = expectedChars.length > 0 ? matched / expectedChars.length : 0;
+  const dist = levenshtein(expected, t);
+  const maxLen = Math.max(expected.length, t.length);
+  const ratio = maxLen > 0 ? 1 - dist / maxLen : 0;
+  const matched = Math.max(0, expected.length - dist);
 
-  if (ratio >= 0.8) {
+  if (ratio >= 0.65) {
     return {
       correct: true,
       message: "好叻！差少少就完美。",
