@@ -11,6 +11,7 @@ const nunito = Nunito({
 export const metadata: Metadata = {
   title: "學廣東話 | 幼兒廣東話練習",
   description: "幼兒廣東話聽、講、砌句子練習。",
+  icons: { icon: "/icon.svg" },
 };
 
 export default function RootLayout({

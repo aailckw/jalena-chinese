@@ -27,6 +27,13 @@ Optional environment variables:
 - `DASHSCOPE_IMAGE_SIZE` defaults to `1280*960`
 - `DASHSCOPE_IMAGE_POLL_MS` defaults to `10000`
 
+## Deploying (e.g. Vercel)
+
+- **Environment variable**: Set `DASHSCOPE_API_KEY` in your host’s environment (e.g. Vercel → Project → Settings → Environment Variables). TTS and ASR both use it.
+- **Favicon**: The app serves `/icon.svg` and redirects `/favicon.ico` to it so the favicon 404 is resolved.
+- **Mixed content**: TTS responses that include an audio URL are normalized to HTTPS so the page can load audio when served over HTTPS.
+- **ASR 503**: Speech recognition (ASR) converts browser audio to WAV using **ffmpeg**. Vercel’s default runtime does not include ffmpeg, so ASR may return 503 there. Set `DASHSCOPE_API_KEY` to fix “not configured” 503s; for “ffmpeg” 503s you would need a custom runtime or a different host that provides ffmpeg.
+
 ## Getting Started
 
 First, run the development server:

@@ -115,7 +115,13 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
         form.append("audio", audioBlob, "recording.webm");
         const asrRes = await fetch("/api/asr", { method: "POST", body: form });
         if (!asrRes.ok) {
-          setFeedback({ message: "請再講一次", isCorrect: false });
+          const errBody = await asrRes.json().catch(() => ({}));
+          const code = errBody?.code;
+          const msg =
+            asrRes.status === 503 && (code === "MISSING_API_KEY" || code === "FFMPEG_REQUIRED")
+              ? "語音辨識喺呢度未設定好，請稍後再試。"
+              : "請再講一次";
+          setFeedback({ message: msg, isCorrect: false });
           setStatus("retry");
           return;
         }

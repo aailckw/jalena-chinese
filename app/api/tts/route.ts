@@ -95,7 +95,9 @@ export async function POST(request: Request) {
   const url = data.output?.audio?.url;
   const audioBase64 = data.output?.audio?.data;
   if (url) {
-    return NextResponse.json({ url });
+    // Ensure HTTPS to avoid mixed content when page is served over HTTPS
+    const safeUrl = url.startsWith("http://") ? url.replace("http://", "https://") : url;
+    return NextResponse.json({ url: safeUrl });
   }
   if (audioBase64) {
     return NextResponse.json({ audioBase64 });

@@ -136,7 +136,11 @@ export async function POST(request: Request) {
   const apiKey = process.env.DASHSCOPE_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "DASHSCOPE_API_KEY not configured" },
+      {
+        error: "DASHSCOPE_API_KEY not configured",
+        code: "MISSING_API_KEY",
+        hint: "Add DASHSCOPE_API_KEY in Vercel (or your host) Environment Variables.",
+      },
       { status: 503 }
     );
   }
@@ -165,6 +169,8 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             error: "Server needs ffmpeg to convert audio. Install ffmpeg and try again.",
+            code: "FFMPEG_REQUIRED",
+            hint: "On Vercel, ASR may be unavailable unless you use a custom runtime with ffmpeg.",
           },
           { status: 503 }
         );
@@ -181,7 +187,7 @@ export async function POST(request: Request) {
     if (existsSync(inputPath)) try { unlinkSync(inputPath); } catch {}
     if (existsSync(wavPath)) try { unlinkSync(wavPath); } catch {}
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "ASR failed" },
+      { error: err instanceof Error ? err.message : "ASR failed", code: "ASR_ERROR" },
       { status: 502 }
     );
   }
