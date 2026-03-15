@@ -11,12 +11,9 @@ interface ProgressIndicatorProps {
 }
 
 export function ProgressIndicator({ weekId, totalSentences }: ProgressIndicatorProps) {
-  const [completedCount, setCompletedCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(() => getCompletedSentences(weekId).length);
 
   useEffect(() => {
-    // Initial load
-    setCompletedCount(getCompletedSentences(weekId).length);
-
     // Poll for changes since other components might update it
     const interval = setInterval(() => {
       setCompletedCount(getCompletedSentences(weekId).length);
