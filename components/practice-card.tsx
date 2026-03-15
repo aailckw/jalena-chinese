@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
@@ -29,6 +30,7 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
   const [status, setStatus] = useState<"idle" | "listening" | "recording" | "checking" | "success" | "retry">("idle");
   const [feedback, setFeedback] = useState<{ message: string; isCorrect: boolean } | null>(null);
   const [lastRecordingUrl, setLastRecordingUrl] = useState<string | null>(null);
+  const [showCardImage, setShowCardImage] = useState(true);
 
   const previewSentence =
     item.frame
@@ -37,6 +39,7 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
   const flashcardSentence = stage === "speak" ? sentenceToSay : previewSentence;
   const swappableSlots = item.frame?.slots.filter((slot) => slot.options.length > 1) ?? [];
   const textToPlay = flashcardSentence;
+  const imageSrc = `/generated/card-images/${item.id}.png`;
 
   useEffect(() => {
     return () => {
@@ -192,6 +195,19 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
             <span className="soft-badge">朗讀卡</span>
           )}
         </div>
+
+        {showCardImage ? (
+          <div className="relative mb-6 h-56 overflow-hidden rounded-[1.6rem] border-2 border-[var(--line)] bg-[var(--surface-strong)] shadow-sm sm:h-72">
+            <Image
+              src={imageSrc}
+              alt={item.expectedAnswer}
+              fill
+              sizes="(min-width: 640px) 768px, 100vw"
+              className="object-cover"
+              onError={() => setShowCardImage(false)}
+            />
+          </div>
+        ) : null}
 
         <div className="mb-6 rounded-[1.4rem] border-2 border-[var(--line)] bg-white/90 px-5 py-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
           <p className="text-3xl font-bold leading-[1.6] tracking-wide text-[var(--foreground)] sm:text-4xl">

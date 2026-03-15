@@ -1,4 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a Next.js app for kindergarten Cantonese practice with AI speech and locally stored flashcard illustrations.
+
+## Card Images
+
+The practice cards look for pre-generated PNG files in `public/generated/card-images/<item-id>.png`.
+
+To generate the full illustration set with the same `DASHSCOPE_API_KEY` already used by the app:
+
+```bash
+npm run generate:card-images
+```
+
+Useful options:
+
+```bash
+# regenerate everything even if files already exist
+npm run generate:card-images -- --force
+
+# test a single card first
+npm run generate:card-images -- --only 2-7-s1
+```
+
+Optional environment variables:
+
+- `DASHSCOPE_BASE_URL` defaults to `https://dashscope-intl.aliyuncs.com/api/v1`
+- `DASHSCOPE_IMAGE_MODEL` defaults to `wan2.6-image`
+- `DASHSCOPE_IMAGE_SIZE` defaults to `1280*960`
+- `DASHSCOPE_IMAGE_POLL_MS` defaults to `10000`
 
 ## Getting Started
 
