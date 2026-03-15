@@ -31,6 +31,9 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
   const [feedback, setFeedback] = useState<{ message: string; isCorrect: boolean } | null>(null);
   const [lastRecordingUrl, setLastRecordingUrl] = useState<string | null>(null);
   const [showCardImage, setShowCardImage] = useState(true);
+  /** Cached TTS audio URL for the current sentence so we can replay without re-calling the API */
+  const [cachedAudioUrl, setCachedAudioUrl] = useState<string | null>(null);
+  const [cachedAudioText, setCachedAudioText] = useState<string>("");
 
   const previewSentence =
     item.frame
@@ -47,9 +50,27 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
     };
   }, [lastRecordingUrl]);
 
+  const playAudioUrl = useCallback(
+    (url: string) => {
+      setStatus("listening");
+      const audio = new Audio(url);
+      audio.onended = () => {
+        setStatus("idle");
+        if (hasFrame && stage === "listen") setStage("choose");
+      };
+      audio.onerror = () => setStatus("idle");
+      audio.play();
+    },
+    [hasFrame, stage]
+  );
+
   const handlePlay = useCallback(async () => {
-    setStatus("listening");
     setFeedback(null);
+    if (cachedAudioUrl && cachedAudioText === textToPlay) {
+      playAudioUrl(cachedAudioUrl);
+      return;
+    }
+    setStatus("listening");
     try {
       const res = await fetch("/api/tts", {
         method: "POST",
@@ -62,20 +83,11 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
         return;
       }
       const data = await res.json();
-      if (data.url) {
-        const audio = new Audio(data.url);
-        await audio.play();
-        audio.onended = () => {
-          setStatus("idle");
-          if (hasFrame && stage === "listen") setStage("choose");
-        };
-      } else if (data.audioBase64) {
-        const audio = new Audio("data:audio/wav;base64," + data.audioBase64);
-        await audio.play();
-        audio.onended = () => {
-          setStatus("idle");
-          if (hasFrame && stage === "listen") setStage("choose");
-        };
+      const url = data.url ? data.url : data.audioBase64 ? "data:audio/wav;base64," + data.audioBase64 : null;
+      if (url) {
+        setCachedAudioUrl(url);
+        setCachedAudioText(textToPlay);
+        playAudioUrl(url);
       } else {
         setStatus("idle");
       }
@@ -83,7 +95,13 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
       setFeedback({ message: "請稍後再試", isCorrect: false });
       setStatus("idle");
     }
-  }, [textToPlay, hasFrame, stage]);
+  }, [textToPlay, hasFrame, stage, cachedAudioUrl, cachedAudioText, playAudioUrl]);
+
+  const handleReplay = useCallback(() => {
+    if (cachedAudioUrl && cachedAudioText === textToPlay) playAudioUrl(cachedAudioUrl);
+  }, [cachedAudioUrl, cachedAudioText, textToPlay, playAudioUrl]);
+
+  const canReplay = cachedAudioUrl != null && cachedAudioText === textToPlay;
 
   const handleChooseCorrect = useCallback(() => {
     markStage(weekId, item.id, "choose");
@@ -263,17 +281,32 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
             exit={{ opacity: 0, y: -20 }}
             className="mb-5"
           >
-            <motion.button
-              type="button"
-              onClick={handlePlay}
-              disabled={status === "listening"}
-              className="kid-button w-full bg-[var(--listen)] px-5 text-white disabled:opacity-70 flex items-center justify-center gap-2"
-              whileHover={status === "listening" ? {} : { scale: 1.02 }}
-              whileTap={status === "listening" ? {} : { scale: 0.98 }}
-            >
-              <Play size={24} fill={status === "listening" ? "none" : "currentColor"} />
-              {status === "listening" ? "慢慢播放中…" : "慢慢聽"}
-            </motion.button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
+              <motion.button
+                type="button"
+                onClick={handlePlay}
+                disabled={status === "listening"}
+                className="kid-button w-full bg-[var(--listen)] px-5 text-white disabled:opacity-70 flex items-center justify-center gap-2 sm:flex-1"
+                whileHover={status === "listening" ? {} : { scale: 1.02 }}
+                whileTap={status === "listening" ? {} : { scale: 0.98 }}
+              >
+                <Play size={24} fill={status === "listening" ? "none" : "currentColor"} />
+                {status === "listening" ? "慢慢播放中…" : "慢慢聽"}
+              </motion.button>
+              {canReplay && (
+                <motion.button
+                  type="button"
+                  onClick={handleReplay}
+                  disabled={status === "listening"}
+                  className="kid-button flex items-center justify-center gap-2 bg-white px-5 text-[var(--listen)] ring-2 ring-[var(--listen)]/15 disabled:opacity-70 sm:flex-1"
+                  whileHover={status === "listening" ? {} : { scale: 1.02 }}
+                  whileTap={status === "listening" ? {} : { scale: 0.98 }}
+                >
+                  <Volume2 size={22} />
+                  再播
+                </motion.button>
+              )}
+            </div>
             <p className="mt-3 text-center text-base text-gray-600 sm:text-lg">
               {hasFrame ? "先聽句子，再揀一個可以換嘅詞語。之後你可以砌句子同自己講。" : "先慢慢聽，再自己講一次。"}
             </p>
@@ -340,6 +373,19 @@ export function PracticeCard({ item, weekId }: PracticeCardProps) {
                   <Play size={20} />
                   再聽一次
                 </motion.button>
+                {canReplay && (
+                  <motion.button
+                    type="button"
+                    onClick={handleReplay}
+                    disabled={status === "listening"}
+                    className="kid-button bg-white px-5 text-[var(--listen)] ring-2 ring-[var(--listen)]/15 disabled:opacity-70 flex items-center justify-center gap-2"
+                    whileHover={status === "listening" ? {} : { scale: 1.02 }}
+                    whileTap={status === "listening" ? {} : { scale: 0.98 }}
+                  >
+                    <Volume2 size={20} />
+                    再播
+                  </motion.button>
+                )}
                 <RecordButton
                   onRecordComplete={handleRecordDone}
                   disabled={status === "checking" || status === "listening"}
