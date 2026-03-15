@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fdf6e3;
+  --foreground: #2a1d14;
+  --surface: #ffffff;
+  --surface-strong: #fff2df;
+  --line: #f1d8b8;
+  --primary: #ff6b6b;
+  --primary-hover: #fa5252;
+  --primary-soft: #ffe3e3;
+  --success: #4ade80;
+  --listen: #3b82f6;
+  --record: #f43f5e;
+  --shadow-soft: 0 14px 36px rgba(109, 62, 27, 0.1);
+  --shadow-card: 0 18px 40px rgba(109, 62, 27, 0.14);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-nunito);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), "Noto Sans TC", sans-serif;
+  /* Playful polka dot background */
+  background-image: radial-gradient(#f1d8b8 2px, transparent 2px);
+  background-size: 30px 30px;
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(255, 107, 107, 0.22);
+}
+
+.page-shell {
+  max-width: 76rem;
+  margin: 0 auto;
+}
+
+.page-panel {
+  border: 3px solid var(--line);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow-soft);
+}
+
+.flashcard {
+  position: relative;
+  border: 4px solid var(--line);
+  border-radius: 2rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 250, 240, 0.98) 100%);
+  box-shadow: var(--shadow-card);
+}
+
+.flashcard::before {
+  content: "";
+  position: absolute;
+  left: 1.5rem;
+  right: 1.5rem;
+  top: 1rem;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffd7ba 0%, #fff0d8 100%);
+}
+
+.flashcard-body {
+  position: relative;
+  z-index: 1;
+}
+
+.kid-button {
+  min-height: 4rem;
+  border-radius: 1.25rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(66, 47, 28, 0.12);
+  transition: all 0.2s ease;
+}
+
+.soft-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  background: var(--surface-strong);
+  padding: 0.4rem 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
