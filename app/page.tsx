@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getLessonWeeks } from "@/data/worksheet-lessons";
 
 export default function Home() {
@@ -29,17 +30,31 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-[var(--foreground)]">選擇主題</h2>
             <span className="soft-badge">4 個主題</span>
           </div>
-          <ul className="grid gap-4">
+          <ul className="grid gap-4 sm:grid-cols-2">
             {weeks.map((w) => (
               <li key={w.id}>
                 <Link
                   href={`/practice/${w.id}`}
-                  className="block rounded-[1.4rem] border-2 border-[var(--line)] bg-white px-5 py-5 text-left text-lg font-semibold text-[var(--foreground)] shadow-sm transition hover:-translate-y-0.5 hover:bg-[var(--surface-strong)]"
+                  className="group flex h-full flex-col overflow-hidden rounded-[1.4rem] border-2 border-[var(--line)] bg-white text-left text-[var(--foreground)] shadow-sm transition hover:-translate-y-0.5 hover:bg-[var(--surface-strong)]"
                 >
-                  <span className="mb-2 inline-flex rounded-full bg-[var(--primary-soft)] px-3 py-1 text-sm font-semibold text-gray-700">
-                    {w.dateRange}
-                  </span>
-                  <div className="text-xl">{w.theme}</div>
+                  <div className="relative h-40 w-full overflow-hidden border-b-2 border-[var(--line)] bg-[var(--surface-strong)] sm:h-48">
+                    <Image
+                      src={`/generated/card-images/theme-${w.id}.png`}
+                      alt={w.theme}
+                      fill
+                      sizes="(min-width: 640px) 50vw, 100vw"
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-1 flex-col p-5">
+                    <span className="mb-2 inline-flex w-fit rounded-full bg-[var(--primary-soft)] px-3 py-1 text-sm font-semibold text-gray-700">
+                      {w.dateRange}
+                    </span>
+                    <div className="text-xl font-bold">{w.theme}</div>
+                  </div>
                 </Link>
               </li>
             ))}
